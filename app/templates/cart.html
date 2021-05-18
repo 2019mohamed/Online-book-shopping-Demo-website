@@ -1,0 +1,12 @@
+{% extends "home.html" %}
+  {% block content %}
+  
+      {%for cart in carts%}
+       <div>
+        <p class="article-content">book id :{{ cart.book_id }}</p>
+       </div>
+       {%endfor%}
+       
+       total: {{total}}
+  
+  {% endblock %}

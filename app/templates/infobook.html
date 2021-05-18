@@ -1,0 +1,23 @@
+{% extends "home.html" %}
+  {% block content %}
+  
+
+
+     
+  <img class="rounded-circle article-img" 
+  src="{{ url_for('static',filename='book_profile/' + 'defalt.jpg' ) }}" width = "300" height = "300">
+
+            <div class="article-metadata">
+            <p class="article-content">content :{{ book.content }}</p>
+            <p class="article-content">price : {{ book.price }}</p>
+            <p class="article-content">author : {{ book.author }}</p>
+            <p class="article-content">publication : {{ book.publication }}</p>
+            <p class="article-content">ISBN : {{ book.ISBN }}</p>
+            </div>
+    
+<div>
+<a class="btn btn-success btn-sm mt-1 mb-1" href="{{ url_for('addcart',book_id=book.id) }}">Add to Cart</a>
+</div>
+  
+  
+  {% endblock %}

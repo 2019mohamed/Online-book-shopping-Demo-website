@@ -1,0 +1,63 @@
+{% extends "home.html" %}
+  {% block content %}
+  
+
+
+
+    <style>
+      .bd-placeholder-img {
+        font-size: 1.125rem;
+        text-anchor: middle;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        user-select: none;
+      }
+
+      @media (min-width: 768px) {
+        .bd-placeholder-img-lg {
+          font-size: 3.5rem;
+        }
+      }
+    </style>
+    
+    
+
+  <div class="album py-5 bg-light">
+    <div class="container">
+
+      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+     
+        
+  
+      {% for book in books %}
+      
+ 
+        <div class="col">
+          <div class="card shadow-sm">
+          <img class="rounded-circle article-img" src="{{ url_for('static',filename='book_profile/' + 'defalt.jpg' ) }}" width = "300" height = "300">
+
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="btn-group">
+    <a class="btn btn-success btn-sm mt-1 mb-1" 
+    href="{{ url_for('book_info', book_id=book.id) }}">view</a>
+              </div>
+                       <div>
+         <p class="article-content">price : {{ book.price }}EGP</p>
+         <p class="article-content">author : {{ book.author}}</p>
+         <p class="article-content">title of book : {{ book.title}}</p>
+
+         </div>
+            </div>
+          </div>
+        </div>
+        </div>
+        
+     
+    
+
+    {% endfor %}
+  
+  
+  {% endblock %}
+
