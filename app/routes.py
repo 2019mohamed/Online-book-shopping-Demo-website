@@ -4,7 +4,7 @@ import secrets
 from PIL import Image
 from flask import render_template, url_for, flash, redirect, request
 from main import app, db, bcrypt
-from forms import RegistrationForm, LoginForm
+from forms import RegistrationForm, LoginForm, UpdateAccountForm
 from Models import User,Admin,Book,Cart,Order,OrderBook
 from flask_login import login_user, current_user, logout_user, login_required
 
@@ -24,11 +24,11 @@ def home():
 
 @app.route("/about")
 def about():
-    return render_template('about.html', title='About')
+    return render_template('about.html')
     
 @app.route("/contact")
 def contact():
-    return render_template('contact.html', title='Contact Page')
+    return render_template('contact.html')
 
 
 @app.route("/register", methods=['GET', 'POST'])
@@ -69,12 +69,48 @@ def book_info(book_id):
     return render_template('infobook.html', book=book)
 
 
+def save_picture(form_picture):
+    random_hex = secrets.token_hex(8)
+    _, f_ext = os.path.splitext(form_picture.filename)
+    picture_fn = random_hex + f_ext
+    picture_path = os.path.join(app.root_path, 'static/user_profile', picture_fn)
 
-@app.route("/account")
+    output_size = (125, 125)
+    i = Image.open(form_picture)
+    i.thumbnail(output_size)
+    i.save(picture_path)
+
+    return picture_fn
+
+@app.route("/account",methods=['GET', 'POST'])
 @login_required
 def account():
-    return render_template('profile.html')
-    
+    form = UpdateAccountForm()
+    if form.validate_on_submit():
+        if form.picture.data:
+            picture_file = save_picture(form.picture.data)
+            current_user.image_file = picture_file
+        current_user.username = form.username.data
+        current_user.email = form.email.data
+        current_user.address = form.address.data
+        current_user.state = form.state.data
+        current_user.pincode = form.pincode.data
+        db.session.commit()
+        flash('Your account has been updated!', 'success')
+        return redirect(url_for('account'))
+    elif request.method == 'GET':
+        form.username.data = current_user.username
+        form.email.data = current_user.email
+        form.address.data=current_user.address
+        form.state.data=current_user.state
+        form.pincode.data=current_user.pincode
+        if current_user.image_file[0] == 'C':
+            image_file = url_for('static', filename='user_profile/' + 'defalt.png')
+        else:
+            image_file = url_for('static', filename='user_profile/' + current_user.image_file)
+        
+    return render_template('profile.html', title='Account',image_file=image_file, form=form)
+
 @app.route("/logout")
 def logout():
     logout_user()
@@ -87,15 +123,20 @@ def logout():
 def addcart(book_id):
     if current_user.is_authenticated:
         book = Book.query.get_or_404(book_id)
-        cart=Cart(user_id=current_user.id,book_id=book_id)
-        db.session.add(cart)
-        db.session.commit()
-        flash('Book has been Successfully Added in Cart', 'success')
-        return redirect(url_for('cart'))
+        if book.piece <= 0:
+            return render_template('infobook.html', book=book )
+        else:    
+            cart=Cart(user_id=current_user.id,book_id=book_id)
+            db.session.add(cart)
+            db.session.commit()
+            flash('Book has been Successfully Added in Cart', 'success')
+            return redirect(url_for('cart'))
+        #book.piece -= 1
+
     else:
         flash('Login to add Book in your Cart', 'danger')
         return redirect(url_for('login'))
-    return render_template('infobook.html', book=book)
+    return render_template('infobook.html', book=book )
 
 
 @app.route("/cart")
@@ -105,3 +146,60 @@ def cart():
     for cart in carts:
         sum=sum+cart.cartbook.price
     return render_template('cart.html', carts=carts,total=sum) 
+
+@app.route("/add_order")
+def add_order():
+    if current_user.is_authenticated:
+        carts=Cart.query.filter_by(user_id=current_user.id).all()
+        sum=0
+        for cart in carts:
+            sum=sum+cart.cartbook.price
+        order=Order(user_id=current_user.id,amount=sum)
+        db.session.add(order)
+        db.session.commit()
+        oid=order.id
+        for cart in carts:
+            orderbook=OrderBook(user_id=current_user.id,book_id=cart.cartbook.id,order_id=oid)
+            cart.cartbook.piece=cart.cartbook.piece-1
+            if(cart.cartbook.piece <= 0):
+                return  redirect(url_for('cart'))               
+            db.session.add(orderbook)
+            db.session.commit()
+            
+        flash('Book has been Ordered Successfully', 'success')
+        Cart.query.filter_by(user_id=current_user.id).delete()
+        db.session.commit()
+        return redirect(url_for('order'))
+    return render_template('order.html', title="order")
+
+@app.route('/admin_infom')
+def admin_infom():
+    if current_user.is_authenticated:
+        users = User.query.order_by(User.username).all()
+        books = Book.query.order_by(Book.title).all()
+    else:
+        return redirect(url_for('about'))
+    return render_template('admin_section.html', users = users , books = books)
+
+@app.route("/order")
+def order():
+    orders=Order.query.filter_by(user_id=current_user.id).all()
+    return render_template('order.html', orders=orders) 
+
+
+@app.route("/detail/<int:order_id>")
+def detail(order_id):
+    orders=Order.query.get_or_404(order_id)
+    orderbooks=OrderBook.query.filter_by(order_id=order_id)
+    return render_template('detail_order.html', orders=orders,orderbooks=orderbooks) 
+
+
+
+@app.route("/book_info/<int:book_id>/delete_book", methods=['POST'])
+@login_required
+def delete_book(book_id):
+    if current_user.is_authenticated:
+        book = Book.query.get_or_404(book_id)
+        db.session.delete(book)
+        db.session.commit()
+        return redirect(url_for('home'))

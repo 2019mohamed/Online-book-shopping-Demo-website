@@ -1,0 +1,24 @@
+{% extends "home.html" %}
+  {% block content %}
+  
+  
+  {%if not orders%}
+     <h3>Empty orders</h3>
+  {%else%}
+  <h4>Your orders:</h4>
+  <div class="list-group">
+
+      {%for order in orders%}
+       <div>
+      <a href="{{ url_for('detail',order_id=order.id)}}" class="list-group-item list-group-item-action">
+
+        <p class="article-content">total : {{ order.amount }}</p>
+        <p class="article-content">data: {{ order.order_date.strftime('%Y-%m-%d') }}</p>
+        
+       </div>
+       {%endfor%}
+       
+     </div>
+     {%endif%}
+
+  {% endblock %}
