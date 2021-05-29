@@ -4,8 +4,8 @@ import secrets
 from PIL import Image
 from flask import render_template, url_for, flash, redirect, request
 from main import app, db, bcrypt
-from forms import RegistrationForm, LoginForm, UpdateAccountForm
-from Models import User,Admin,Book,Cart,Order,OrderBook
+from forms import RegistrationForm, LoginForm, UpdateAccountForm, AddBookForm,UpdateBookForm
+from Models import User,Book,Cart,Order,OrderBook
 from flask_login import login_user, current_user, logout_user, login_required
 
 
@@ -41,7 +41,6 @@ def register():
         user = User(username=form.username.data, email=form.email.data, password=hashed_password)
         db.session.add(user)
         db.session.commit()
-        flash('Your account has been created! You are now able to log in', 'success')
         return redirect(url_for('login'))
     return render_template('signin.html', title='Register', form=form)
 
@@ -57,8 +56,6 @@ def login():
             login_user(user, remember=form.remember.data)
             next_page = request.args.get('next')
             return redirect(next_page) if next_page else redirect(url_for('home'))
-        else:
-            flash('Login Unsuccessful. Please check email and password', 'danger')
     return render_template('login.html', title='Login', form=form)
 
 
@@ -69,18 +66,66 @@ def book_info(book_id):
     return render_template('infobook.html', book=book)
 
 
-def save_picture(form_picture):
+def save_picture(form_picture , user = True):
     random_hex = secrets.token_hex(8)
     _, f_ext = os.path.splitext(form_picture.filename)
     picture_fn = random_hex + f_ext
-    picture_path = os.path.join(app.root_path, 'static/user_profile', picture_fn)
-
-    output_size = (125, 125)
+    if user :
+        picture_path = os.path.join(app.root_path, 'static/user_profile', picture_fn)
+        output_size = (150, 150)
+    else:
+        picture_path = os.path.join(app.root_path, 'static/book_profile', picture_fn)
+        output_size = (300, 300)
+        
     i = Image.open(form_picture)
     i.thumbnail(output_size)
     i.save(picture_path)
 
     return picture_fn
+
+
+
+@app.route("/add_book",methods=['GET', 'POST'])
+def add_book():
+    form = AddBookForm()
+    if form.validate_on_submit():
+        picture_file = save_picture(form.picture.data, user = False)
+        book = Book(title=form.title.data, author=form.author.data, publication=form.publication.data,ISBN=form.ISBN.data,content=form.content.data,price=form.price.data,piece=form.piece.data,image_file=picture_file)
+        db.session.add(book)
+        db.session.commit()
+        return redirect(url_for('home'))
+    return render_template('add_book.html', form=form) 
+    
+
+
+@app.route("/edit_book/<int:book_id>",methods=['GET', 'POST'])
+@login_required
+def edit_book(book_id):
+    form = UpdateBookForm()
+    book = Book.query.get_or_404(book_id)
+    if form.validate_on_submit():
+        if form.picture.data:
+            picture_file = save_picture(form.picture.data , user = False)
+            book.image_file=picture_file
+        book.title=form.title.data
+        book.author=form.author.data
+        book.publication=form.publication.data
+        book.ISBN=form.ISBN.data
+        book.content=form.content.data
+        book.price=form.price.data
+        book.piece=form.piece.data
+        db.session.commit()
+        return redirect(url_for('home'))
+    elif request.method == 'GET':
+        form.title.data = book.title
+        form.author.data = book.author
+        form.publication.data=book.publication
+        form.ISBN.data=book.ISBN
+        form.content.data=book.content
+        form.price.data=book.price
+        form.piece.data=book.piece
+    return render_template('add_book.html', form=form,book=book)
+
 
 @app.route("/account",methods=['GET', 'POST'])
 @login_required
@@ -88,7 +133,7 @@ def account():
     form = UpdateAccountForm()
     if form.validate_on_submit():
         if form.picture.data:
-            picture_file = save_picture(form.picture.data)
+            picture_file = save_picture(form.picture.data , user= True)
             current_user.image_file = picture_file
         current_user.username = form.username.data
         current_user.email = form.email.data
@@ -96,7 +141,6 @@ def account():
         current_user.state = form.state.data
         current_user.pincode = form.pincode.data
         db.session.commit()
-        flash('Your account has been updated!', 'success')
         return redirect(url_for('account'))
     elif request.method == 'GET':
         form.username.data = current_user.username
@@ -123,19 +167,18 @@ def logout():
 def addcart(book_id):
     if current_user.is_authenticated:
         book = Book.query.get_or_404(book_id)
-        if book.piece <= 0:
-            return render_template('infobook.html', book=book )
-        else:    
-            cart=Cart(user_id=current_user.id,book_id=book_id)
-            db.session.add(cart)
-            db.session.commit()
-            flash('Book has been Successfully Added in Cart', 'success')
-            return redirect(url_for('cart'))
+        #if book.piece <= 0:
+         #   return render_template('infobook.html', book=book )
+        #else:    
+        cart=Cart(user_id=current_user.id,book_id=book_id)
+        db.session.add(cart)
+        db.session.commit()
+        return redirect(url_for('cart'))
         #book.piece -= 1
 
     else:
-        flash('Login to add Book in your Cart', 'danger')
         return redirect(url_for('login'))
+    
     return render_template('infobook.html', book=book )
 
 
@@ -166,7 +209,6 @@ def add_order():
             db.session.add(orderbook)
             db.session.commit()
             
-        flash('Book has been Ordered Successfully', 'success')
         Cart.query.filter_by(user_id=current_user.id).delete()
         db.session.commit()
         return redirect(url_for('order'))

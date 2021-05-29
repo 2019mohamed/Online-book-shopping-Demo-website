@@ -6,6 +6,9 @@
   {% if book.piece <= 0 %}
 		<h2>Out Of WetSite</h2>
 		        {% if current_user.is_authenticated %}
+		         {%if  current_user.username[:5] == "admin" and current_user.is_authenticated %}
+                    <a class="btn btn-primary" href="{{ url_for('edit_book',book_id=book.id) }}" role="button">Edit</a>
+            {%endif%}
         {%endif%}
 	  {% else: %}
 
@@ -29,7 +32,7 @@
 <a class="btn btn-dark" href="{{ url_for('addcart',book_id=book.id) }}" role="button">Add to Cart</a>
         {% if current_user.is_authenticated %}
             {%if  current_user.username[:5] == "admin" and current_user.is_authenticated %}
-                    <a class="btn btn-primary" href="#" role="button">Edit</a>
+                    <a class="btn btn-primary" href="{{ url_for('edit_book',book_id=book.id) }}" role="button">Edit</a>
             {%endif%}
         
         

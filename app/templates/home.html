@@ -32,7 +32,7 @@
                 <a class="nav-item nav-link" href="{{url_for('logout')}}">Logout</a>
                   {% if current_user.username[:5] == "admin" and current_user.is_authenticated  %}
                       	<a class="nav-item nav-link" href="{{url_for('admin_infom')}}">Admin section</a>
-  	                     <a class="nav-item nav-link" href="#">Add Book</a>
+  	                     <a class="nav-item nav-link" href="{{url_for('add_book')}}">Add Book</a>
                   {%endif%}
               
               {% else %}
