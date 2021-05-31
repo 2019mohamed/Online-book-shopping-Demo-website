@@ -1,8 +1,0 @@
-Flask
-Flask-SQLAlchemy
-gunicorn
-Flask-Bcrypt
-Flask-Login
-Flask-WTF
-WTForms
-wtforms-validators
